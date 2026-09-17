@@ -11,15 +11,15 @@ SEED = 42
 
 CORPORA = {
     "dgt": {
-        "path": Path("/content/drive/MyDrive/Colab Notebooks/dgt-es-en.jsonl"),
+        "path": Path("/path/to/dgt-es-en.jsonl"),
         "sample_size": 100_000,
     },
     "jrc_acquis": {
-        "path": Path("/content/drive/MyDrive/Colab Notebooks/jrc-acquis-es-en.jsonl"),
+        "path": Path("/path/to/jrc-acquis-es-en.jsonl"),
         "sample_size": 50_000,
     },
     "gnome": {
-        "path": Path("/content/drive/MyDrive/Colab Notebooks/gnome-ubuntu-kde-es-en.jsonl"),
+        "path": Path("/path/to/gnome-es-en.jsonl"),
         "sample_size": 50_000,
     },
 }
