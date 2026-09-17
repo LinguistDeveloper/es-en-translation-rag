@@ -145,195 +145,74 @@ Shuffle
 
 ---
 
-# Phase 2 — Model Fine-Tuning
+### Phase 2 — Model Fine-Tuning
 
-> **Status: Placeholder — implementation to be added**
+**Status: Documented; clean script not yet independently tested**
 
-This phase fine-tunes the base LLM for **Spanish→English translation** using the 162,000-segment training dataset produced in Phase 1.
+The fine-tuning workflow uses QLoRA to adapt Llama 3.1 8B Instruct for Spanish→English translation.
 
-The experiment uses **QLoRA** so that the model can be fine-tuned within the available GPU resources while keeping the number of trainable parameters small.
+The documented pipeline includes:
 
-### Planned workflow
+* 4-bit NF4 quantization with double quantization
+* LoRA adaptation of the attention and MLP projection layers
+* Spanish→English instruction formatting
+* masked causal-language-model loss, calculated on the target translation
+* configurable dataset size for small-scale experiments or the full fine-tuning pool
+* reproducible train/validation splitting using seed 42
+* adapter and experiment-configuration saving
 
-```text
-Prepared training data
-        │
-        ▼
-Tokenization / prompt formatting
-        │
-        ▼
-QLoRA fine-tuning
-        │
-        ▼
-Fine-tuned adapter
-```
+The repository pipeline is designed to use the 180,000-example fine-tuning pool produced during Phase 1, which is subsequently divided into 162,000 training examples and 18,000 held-out evaluation examples.
 
-Further details will be added once the final fine-tuning script and configuration have been committed.
+### Preliminary fine-tuning experiment
 
-**Implementation:** [`finetuning/finetune.py`](finetuning/finetune.py)
+Before creating the cleaned repository script, the QLoRA workflow was experimentally run in Google Colab using a much smaller subset:
 
----
+| Dataset             | Examples |
+| ------------------- | -------: |
+| Training            |    3,240 |
+| Held-out validation |      360 |
+| Total               |    3,600 |
 
-# Phase 3 — Model Evaluation
+Configuration included:
 
-> **Status: Placeholder — implementation to be added**
+* **Base model:** Llama 3.1 8B Instruct
+* **Learning rate:** 1e-4
+* **Effective batch size:** 8
+* **LoRA rank:** 4
+* **LoRA alpha:** 16
+* **LoRA dropout:** 0.10
+* **Epochs:** 1
+* **Maximum sequence length:** 512
+* **Seed:** 42
 
-This phase evaluates the base and fine-tuned models using the **18,000-segment held-out evaluation dataset**.
+On the 360-example held-out evaluation set:
 
-The evaluation is designed to measure whether fine-tuning produces an improvement on data that was not used during training.
+| Metric     | Base model | Fine-tuned model |
+| ---------- | ---------: | ---------------: |
+| Loss       |     1.4506 |           1.2324 |
+| Perplexity |     4.2657 |           3.4294 |
 
-### Initial metric
+This corresponds to a **15.04% reduction in loss** and a **19.61% reduction in perplexity** for this preliminary experiment.
 
-The first evaluation metric is **perplexity**, derived from the model's loss on the held-out target text.
+These results should be interpreted as preliminary because they were obtained from the 3,600-example subset rather than the full 180,000-example fine-tuning pool. The cleaned `finetune.py` script documents the experimental workflow but has not yet been independently rerun from the repository.
 
-The project will subsequently incorporate translation-quality metrics such as:
+### Phase 3 — Model Evaluation
 
-* COMET
-* BERTScore
-* BLEU
+**Status: Placeholder**
 
-where appropriate.
+The evaluation phase will use the held-out evaluation data to compare the base and fine-tuned models.
 
-### Planned comparison
+Initial evaluation will use perplexity, followed by translation-quality metrics such as COMET, BERTScore and BLEU where appropriate.
 
-```text
-                 ┌──► Base model
-Held-out data ───┤
-                 └──► Fine-tuned model
-```
+### Phase 4 — Retrieval-Augmented Translation
 
-The results will be reported comparatively rather than relying on a single metric.
+**Status: Placeholder**
 
-**Implementation:** [`evaluation/`](evaluation/)
+The final experiment will investigate whether translation-memory retrieval improves Spanish→English translation quality, comparing:
 
----
+1. Base model
+2. Base model + retrieval
+3. Fine-tuned model
+4. Fine-tuned model + retrieval
 
-# Phase 4 — Retrieval-Augmented Translation
-
-> **Status: Placeholder — implementation to be added**
-
-The final phase investigates whether retrieving relevant translation-memory segments can further improve translation quality.
-
-The 20,000-segment retrieval dataset produced during Phase 1 will be used as the translation-memory/vector database.
-
-### Planned experiment
-
-The retrieval experiment will compare four configurations:
-
-```text
-                    No Retrieval       With Retrieval
-                    ────────────       ──────────────
-
-Base model              │                    │
-                        ▼                    ▼
-                     Base                 Base + RAG
-
-
-Fine-tuned model        │                    │
-                        ▼                    ▼
-                    Fine-tuned          Fine-tuned + RAG
-```
-
-The purpose is to distinguish between:
-
-1. improvements attributable to fine-tuning;
-2. improvements attributable to retrieval;
-3. any additional benefit from combining fine-tuning and retrieval.
-
-The retrieval system will use semantic similarity between the incoming Spanish source segment and the translation-memory corpus, with the retrieved bilingual context supplied to the LLM during translation.
-
-Further details of the embedding model, vector index, retrieval strategy and evaluation methodology will be added once the implementation is finalized.
-
----
-
-# Overall Experimental Design
-
-The complete experiment can therefore be represented as:
-
-```text
-                    ┌─────────────────────┐
-                    │  DGT / JRC / GNOME  │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │  Data Preparation   │
-                    │     200k segments   │
-                    └──────────┬──────────┘
-                               │
-                 ┌─────────────┴─────────────┐
-                 │                           │
-                 ▼                           ▼
-        162k Training + 18k Eval       20k Vector DB
-                 │                           │
-                 ▼                           │
-          ┌──────────────┐                   │
-          │  Fine-tuning │                   │
-          └──────┬───────┘                   │
-                 │                           │
-                 ▼                           │
-          Fine-tuned model                   │
-                 │                           │
-                 └─────────────┬─────────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │      Evaluation     │
-                    │ Perplexity / COMET  │
-                    │ BERTScore / BLEU    │
-                    └──────────┬──────────┘
-                               │
-                               ▼
-                    ┌─────────────────────┐
-                    │ Retrieval experiment│
-                    │ Base + RAG           │
-                    │ FT + RAG             │
-                    └─────────────────────┘
-```
-
-# Reproducibility
-
-The experiment uses fixed random seeds and separates data preparation, fine-tuning and evaluation into distinct stages.
-
-Large datasets, model weights and generated artifacts are not stored directly in the repository. The repository contains the code, configuration and documentation required to understand and reproduce the experiment.
-
----
-
-## Repository Structure
-
-```text
-es-en-translation-rag/
-│
-├── README.md
-│
-├── data/
-│   └── prepare_data.py
-│
-├── finetuning/
-│   └── finetune.py
-│
-├── evaluation/
-│   └── perplexity.py
-│
-├── rag/
-│   └── [to be added]
-│
-├── configs/
-│   └── [to be added]
-│
-└── requirements.txt
-```
-
-# Project Status
-
-* [x] Select source corpora
-* [x] Implement reproducible reservoir sampling
-* [x] Combine and shuffle sampled data
-* [x] Create training/evaluation/retrieval partitions
-* [ ] Add final data-leakage/deduplication checks
-* [ ] Add QLoRA fine-tuning script
-* [ ] Add held-out evaluation
-* [ ] Add translation-quality metrics
-* [ ] Add vector database / retrieval pipeline
-* [ ] Compare base vs fine-tuned models with and without retrieval
-* [ ] Analyse and document final results
+The retrieval dataset consists of the 20,000 examples reserved during Phase 1.
