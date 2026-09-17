@@ -70,14 +70,14 @@ This is important because the corpora are initially processed sequentially. With
 
 ## Dataset split
 
-The combined 200,000 segments are divided into:
+The combined 200,000 sampled segments are divided into two datasets:
 
 ```text
-180,000 → fine-tuning/evaluation pool
+180,000 → training/evaluation pool
  20,000 → translation-memory vector database
 ```
 
-The 180,000-segment fine-tuning/evaluation pool is subsequently divided again:
+The **180,000-segment training/evaluation pool** is subsequently divided into training and held-out evaluation data as part of the fine-tuning workflow:
 
 ```text
 162,000 → fine-tuning
@@ -92,6 +92,9 @@ The resulting experimental datasets are therefore:
 | Held-out evaluation |      18,000 | Evaluation of the base and fine-tuned models |
 | Vector database     |      20,000 | Translation-memory retrieval                 |
 | **Total**           | **200,000** |                                              |
+
+The first split is performed by `prepare_data.py`. The subsequent 162,000/18,000 split is performed during the fine-tuning workflow.
+                                             |
 
 ### Random seeds
 
