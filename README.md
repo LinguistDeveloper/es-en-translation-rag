@@ -196,13 +196,64 @@ This corresponds to a **15.04% reduction in loss** and a **19.61% reduction in p
 
 These results should be interpreted as preliminary because they were obtained from the 3,600-example subset rather than the full 180,000-example fine-tuning pool. The cleaned `finetune.py` script documents the experimental workflow but has not yet been independently rerun from the repository.
 
-### Phase 3 — Model Evaluation
+## Phase 3 — Evaluation
 
-**Status: Placeholder**
+**Status: Preliminary evaluation complete; evaluation script documented**
 
-The evaluation phase will use the held-out evaluation data to compare the base and fine-tuned models.
+The project evaluates Spanish→English translation quality using a held-out dataset that was not used for fine-tuning.
 
-Initial evaluation will use perplexity, followed by translation-quality metrics such as COMET, BERTScore and BLEU where appropriate.
+### Perplexity evaluation
+
+`evaluation/perplexity.py` calculates **target-only causal language-model loss and perplexity**, masking the source/prompt tokens so that only the English translation contributes to the evaluation loss.
+
+The evaluation compares:
+
+* Base `Llama-3.1-8B-Instruct`
+* `Llama-3.1-8B-Instruct` + QLoRA adapter
+
+The preliminary experiment used **3,600 examples**, split into:
+
+* 3,240 fine-tuning examples
+* 360 held-out evaluation examples
+
+Configuration:
+
+* Learning rate: `1e-4`
+* LoRA rank: `4`
+* LoRA alpha: `16`
+* LoRA dropout: `0.10`
+* Epochs: `1`
+* Effective batch size: `8`
+* Maximum sequence length: `512`
+* Random seed: `42`
+
+Preliminary held-out results:
+
+| Model            | Mean target loss | Target perplexity |
+| ---------------- | ---------------: | ----------------: |
+| Base model       |           1.4506 |            4.2657 |
+| Fine-tuned model |           1.2324 |            3.4294 |
+
+This corresponds to a **15.04% reduction in mean target loss** and a **19.61% reduction in perplexity** on the 360-example held-out set.
+
+These results are preliminary and were obtained from the original Colab evaluation notebook. The cleaned GitHub evaluation script has been reconstructed from that notebook and has not yet been independently rerun.
+
+### Next evaluation stages
+
+Further evaluation will investigate whether the observed improvement extends beyond perplexity using metrics such as:
+
+* COMET
+* BERTScore
+* BLEU
+
+The project will then compare four configurations:
+
+1. Base model
+2. Base model + translation-memory RAG
+3. Fine-tuned model
+4. Fine-tuned model + translation-memory RAG
+
+The RAG experiments will use the separate **20,000-segment translation-memory retrieval set**.
 
 ### Phase 4 — Retrieval-Augmented Translation
 
