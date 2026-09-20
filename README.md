@@ -196,6 +196,8 @@ This corresponds to a **15.04% reduction in loss** and a **19.61% reduction in p
 
 These results should be interpreted as preliminary because they were obtained from the 3,600-example subset rather than the full 180,000-example fine-tuning pool. The cleaned `finetune.py` script documents the experimental workflow but has not yet been independently rerun from the repository.
 
+---
+
 ## Phase 3 — Evaluation
 
 **Status: Preliminary evaluation complete; token-level analysis ongoing**
@@ -281,6 +283,7 @@ The RAG experiments will use the separate **20,000-segment translation-memory re
 
 This will allow the project to investigate not only whether fine-tuning and retrieval improve performance, but also whether their effects are **complementary**.
 
+---
 
 ### Phase 4 — Retrieval-Augmented Translation
 
