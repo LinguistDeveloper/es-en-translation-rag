@@ -198,9 +198,9 @@ These results should be interpreted as preliminary because they were obtained fr
 
 ## Phase 3 — Evaluation
 
-**Status: Preliminary evaluation complete; evaluation script documented**
+**Status: Preliminary evaluation complete; token-level analysis ongoing**
 
-The project evaluates Spanish→English translation quality using a held-out dataset that was not used for fine-tuning.
+The project evaluates Spanish→English translation using a held-out dataset that was not used for fine-tuning.
 
 ### Perplexity evaluation
 
@@ -236,17 +236,41 @@ Preliminary held-out results:
 
 This corresponds to a **15.04% reduction in mean target loss** and a **19.61% reduction in perplexity** on the 360-example held-out set.
 
-These results are preliminary and were obtained from the original Colab evaluation notebook. The cleaned GitHub evaluation script has been reconstructed from that notebook and has not yet been independently rerun.
+### Translation and COMET evaluation
+
+The same 360 held-out examples were also used to generate deterministic translations from both models and calculate COMET scores.
+
+An important result emerged: despite the reduction in target loss and perplexity, the base and fine-tuned models produced **identical greedy translations for all 360 examples**.
+
+| Model            |    COMET |
+| ---------------- | -------: |
+| Base model       | 0.870994 |
+| Fine-tuned model | 0.870994 |
+
+Thus, the preliminary results do **not** show an improvement in COMET or in the resulting greedy translations, despite the improvement in perplexity.
+
+This provides a useful distinction between **model confidence in the reference translation** and **the translation selected by deterministic decoding**.
+
+### Logit and token-level analysis
+
+A direct comparison of the base and fine-tuned model logits confirms that the QLoRA adapter is active and materially changes the model's output probability distribution.
+
+Initial token-level analysis also indicates that the fine-tuned model can assign substantially higher probability to reference translation tokens even when the final greedy translation remains unchanged.
+
+A full token-level analysis across the 360-example evaluation set is currently in progress. This will examine whether the perplexity reduction corresponds to a systematic increase in the probability assigned to the reference translations.
 
 ### Next evaluation stages
 
-Further evaluation will investigate whether the observed improvement extends beyond perplexity using metrics such as:
+Further evaluation will investigate translation quality using additional metrics, including:
 
 * COMET
 * BERTScore
 * BLEU
+* Reference-token probability / negative log-likelihood
 
-The project will then compare four configurations:
+The next major experiment will test whether translation-memory retrieval provides an additional benefit beyond fine-tuning.
+
+The project will compare four configurations:
 
 1. Base model
 2. Base model + translation-memory RAG
@@ -254,6 +278,9 @@ The project will then compare four configurations:
 4. Fine-tuned model + translation-memory RAG
 
 The RAG experiments will use the separate **20,000-segment translation-memory retrieval set**.
+
+This will allow the project to investigate not only whether fine-tuning and retrieval improve performance, but also whether their effects are **complementary**.
+
 
 ### Phase 4 — Retrieval-Augmented Translation
 
