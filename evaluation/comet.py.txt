@@ -1,0 +1,231 @@
+```python
+# ============================================================
+# COMET Evaluation of Existing Translation Predictions
+# ============================================================
+#
+# Scores pre-generated base-model and adapter-model translations
+# against the same source/reference pairs using COMET.
+#
+# No translation generation is performed in this script.
+# ============================================================
+
+import json
+from pathlib import Path
+
+import pandas as pd
+import torch
+from comet import download_model, load_from_checkpoint
+
+
+# ------------------------------------------------------------
+# Configuration
+# ------------------------------------------------------------
+
+DATA_DIR = Path("/path/to/")
+
+BASE_FILE = DATA_DIR / "base_predictions_file.jsonl"
+ADAPTER_FILE = DATA_DIR / "adapter_predictions_file.jsonl"
+RESULTS_FILE = DATA_DIR / "comet_results.csv"
+
+COMET_MODEL = "Unbabel/wmt22-comet-da"
+BATCH_SIZE = 8
+USE_GPU = torch.cuda.is_available()
+
+
+# ------------------------------------------------------------
+# Utilities
+# ------------------------------------------------------------
+
+def load_jsonl(path):
+    """Load a JSONL file into a list of dictionaries."""
+    with path.open("r", encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
+def validate_alignment(base_records, adapter_records):
+    """Ensure both prediction files contain matching inputs."""
+    if len(base_records) != len(adapter_records):
+        raise ValueError(
+            "Base and adapter files contain different numbers of records."
+        )
+
+    for base, adapter in zip(base_records, adapter_records):
+        if base["id"] != adapter["id"]:
+            raise ValueError(
+                f"ID mismatch: {base['id']} vs {adapter['id']}"
+            )
+
+        if base["source"] != adapter["source"]:
+            raise ValueError(
+                f"Source mismatch at ID {base['id']}"
+            )
+
+        if base["reference"] != adapter["reference"]:
+            raise ValueError(
+                f"Reference mismatch at ID {base['id']}"
+            )
+
+
+def make_comet_data(records):
+    """Convert prediction records to COMET's expected format."""
+    return [
+        {
+            "src": record["source"],
+            "mt": record["prediction"],
+            "ref": record["reference"],
+        }
+        for record in records
+    ]
+
+
+def score_predictions(model, data, label):
+    """Score a set of translations with COMET."""
+    print(f"\nScoring {label} predictions...")
+    print(f"Examples: {len(data)}")
+
+    output = model.predict(
+        data,
+        batch_size=BATCH_SIZE,
+        gpus=1 if USE_GPU else 0,
+        progress_bar=True,
+    )
+
+    scores = output.scores
+    mean_score = sum(scores) / len(scores)
+
+    print(f"Mean {label} COMET: {mean_score:.4f}")
+
+    return scores
+
+
+# ------------------------------------------------------------
+# Load predictions
+# ------------------------------------------------------------
+
+base_records = load_jsonl(BASE_FILE)
+adapter_records = load_jsonl(ADAPTER_FILE)
+
+print(f"Base records:    {len(base_records)}")
+print(f"Adapter records: {len(adapter_records)}")
+
+
+# ------------------------------------------------------------
+# Validate prediction alignment
+# ------------------------------------------------------------
+
+validate_alignment(base_records, adapter_records)
+
+print("Alignment check: PASSED")
+
+
+# ------------------------------------------------------------
+# Load COMET model
+# ------------------------------------------------------------
+
+print(f"\nLoading COMET model: {COMET_MODEL}")
+print(f"GPU available: {USE_GPU}")
+
+comet_model_path = download_model(COMET_MODEL)
+comet_model = load_from_checkpoint(comet_model_path)
+
+print("COMET model loaded.")
+
+
+# ------------------------------------------------------------
+# Prepare COMET input
+# ------------------------------------------------------------
+
+base_data = make_comet_data(base_records)
+adapter_data = make_comet_data(adapter_records)
+
+
+# ------------------------------------------------------------
+# Score predictions
+# ------------------------------------------------------------
+
+base_scores = score_predictions(
+    comet_model,
+    base_data,
+    "BASE",
+)
+
+adapter_scores = score_predictions(
+    comet_model,
+    adapter_data,
+    "ADAPTER",
+)
+
+
+# ------------------------------------------------------------
+# Build comparison dataset
+# ------------------------------------------------------------
+
+results = []
+
+for base, adapter, base_score, adapter_score in zip(
+    base_records,
+    adapter_records,
+    base_scores,
+    adapter_scores,
+):
+    results.append(
+        {
+            "id": base["id"],
+            "corpus": base.get("corpus"),
+            "source": base["source"],
+            "reference": base["reference"],
+            "base_prediction": base["prediction"],
+            "adapter_prediction": adapter["prediction"],
+            "base_comet": base_score,
+            "adapter_comet": adapter_score,
+            "comet_delta": adapter_score - base_score,
+        }
+    )
+
+results_df = pd.DataFrame(results)
+
+
+# ------------------------------------------------------------
+# Summary
+# ------------------------------------------------------------
+
+mean_base = results_df["base_comet"].mean()
+mean_adapter = results_df["adapter_comet"].mean()
+mean_delta = results_df["comet_delta"].mean()
+
+print("\n" + "=" * 60)
+print("COMET SUMMARY")
+print("=" * 60)
+
+print(f"Examples:              {len(results_df)}")
+print(f"Mean base COMET:       {mean_base:.4f}")
+print(f"Mean adapter COMET:    {mean_adapter:.4f}")
+print(f"Mean COMET difference: {mean_delta:+.4f}")
+
+print("\nPer-example results:")
+
+display(
+    results_df[
+        [
+            "id",
+            "base_comet",
+            "adapter_comet",
+            "comet_delta",
+        ]
+    ].head(20)
+)
+
+
+# ------------------------------------------------------------
+# Save results
+# ------------------------------------------------------------
+
+results_df.to_csv(
+    RESULTS_FILE,
+    index=False,
+    encoding="utf-8",
+)
+
+print(f"\nSaved results to:")
+print(RESULTS_FILE)
+```
