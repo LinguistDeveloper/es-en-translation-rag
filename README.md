@@ -189,8 +189,8 @@ On the 360-example held-out evaluation set:
 
 | Metric     | Base model | Fine-tuned model |
 | ---------- | ---------: | ---------------: |
-| Loss       |     1.4506 |           1.2324 |
-| Perplexity |     4.2657 |           3.4294 |
+| Loss       |     1.4506 |           1.2295 |
+| Perplexity |     4.2657 |           3.4194 |
 
 This corresponds to a **15.04% reduction in loss** and a **19.61% reduction in perplexity** for this preliminary experiment.
 
