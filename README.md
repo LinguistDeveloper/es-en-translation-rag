@@ -240,8 +240,6 @@ This corresponds to a **15.04% reduction in mean target loss** and a **19.61% re
 
 ### Translation and COMET evaluation
 
-[svg](https://github.com/LinguistDeveloper/es-en-translation-rag#translation-and-comet-evaluation)
-
 The project also evaluates generated Spanish→English translations against the English reference translations using **COMET**.
 
 Because COMET scoring is substantially more computationally expensive than the perplexity evaluation, an initial **50-example subset** of the held-out evaluation data is being used as a preliminary test. This provides an efficient way to validate the translation-generation and COMET scoring pipeline and obtain an initial comparison before running the full 360-example evaluation.
@@ -260,8 +258,6 @@ The full **360-example held-out set** will be evaluated once the COMET pipeline 
 
 ### Logit and token-level analysis
 
-[svg](https://github.com/LinguistDeveloper/es-en-translation-rag#logit-and-token-level-analysis)
-
 A direct comparison of the base and fine-tuned model logits confirms that the QLoRA adapter is active and materially changes the model's output probability distribution.
 
 Initial token-level analysis also indicates that the fine-tuned model can assign substantially higher probability to reference translation tokens.
@@ -269,8 +265,6 @@ Initial token-level analysis also indicates that the fine-tuned model can assign
 A full token-level analysis across the 360-example evaluation set is ongoing. This will examine whether the reduction in perplexity corresponds to a systematic increase in the probability assigned to the reference translations, and whether those changes are concentrated in particular types of tokens or translation segments.
 
 ### Next evaluation stages
-
-[svg](https://github.com/LinguistDeveloper/es-en-translation-rag#next-evaluation-stages)
 
 Further evaluation will investigate translation quality using additional metrics, including:
 
