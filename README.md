@@ -11,9 +11,9 @@ The experiment is divided into four phases:
 | Phase                                  | Description                                                                            | Status      |
 | -------------------------------------- | -------------------------------------------------------------------------------------- | ----------- |
 | **1. Data Preparation**                | Select, sample, combine and split bilingual corpora                                    | In progress |
-| **2. Model Fine-Tuning**               | Fine-tune an LLM for ES→EN translation using QLoRA                                     | Placeholder |
-| **3. Model Evaluation**                | Evaluate the base and fine-tuned models on held-out data                               | Placeholder |
-| **4. Retrieval-Augmented Translation** | Add translation-memory retrieval and compare base/FT models with and without retrieval | Placeholder |
+| **2. Model Fine-Tuning**               | Fine-tune an LLM for ES→EN translation using QLoRA                                     | In progress |
+| **3. Model Evaluation**                | Evaluate the base and fine-tuned models on held-out data                               | In progress |
+| **4. Retrieval-Augmented Translation** | Add translation-memory retrieval and compare base/FT models with and without retrieval | In progress |
 
 ---
 
@@ -292,13 +292,61 @@ This will allow the project to investigate not only whether fine-tuning and retr
 
 ### Phase 4 — Retrieval-Augmented Translation
 
-**Status: Placeholder**
+**Status: Vector database implemented; base and adapter hybrid predictions generated; evaluation ongoing**
 
-The final experiment will investigate whether translation-memory retrieval improves Spanish→English translation quality, comparing:
+The retrieval experiment investigates whether translation-memory retrieval improves Spanish→English translation quality and whether retrieval has complementary effects when combined with fine-tuning. The current implementation uses a vector database containing the 400 segments reserved during Phase 1.
+
+The workflow now supports generating and comparing hybrid predictions for both the base model and the fine-tuned model:
 
 1. Base model
 2. Base model + retrieval
 3. Fine-tuned model
 4. Fine-tuned model + retrieval
 
-The retrieval dataset consists of the 20,000 examples reserved during Phase 1.
+The retrieval dataset consists of the 400 examples reserved during Phase 1.
+
+### Retrieval and hybrid prediction workflow
+
+The current workflow separates model generation from retrieval-based post-processing. This makes it possible to preserve the original model predictions and inspect the effect of translation-memory retrieval independently.
+
+The implemented workflow includes:
+
+1. Generate translations with the **base model**.
+2. Generate translations with the **fine-tuned model using the QLoRA adapter**.
+3. Query the translation-memory vector database for relevant Spanish source segments.
+4. Produce hybrid predictions by combining the generated translation with retrieved translation-memory evidence.
+5. Save the base, adapter, and hybrid outputs for subsequent comparison and evaluation.
+
+The current hybrid experiments use semantic vector retrieval and are intended to be compared with fuzzy matching. The outputs are retained in separate files so that retrieval behaviour, model generation, and post-processing can be evaluated independently rather than treated as a single opaque pipeline.
+
+The hybrid approach is being investigated as a practical translation-memory augmentation strategy: the model generates a translation, while retrieval provides potentially relevant bilingual evidence that can be used to revise or support the generated output. Initial inspection has identified cases in which the hybrid prompt or output formatting can introduce unnecessary text, such as explanatory prefixes. These cases will be tracked as part of the qualitative and quantitative evaluation.
+
+The next evaluation stage will compare:
+
+- Base model predictions
+- Base model + semantic retrieval hybrid predictions
+- Fine-tuned adapter predictions
+- Fine-tuned adapter + semantic retrieval hybrid predictions
+- Where applicable, fuzzy-retrieval variants of the same configurations
+
+The comparison will consider translation quality, retrieval relevance, consistency with the reference translation, and possible regressions introduced by retrieval. Relevant retrieval metrics may include recall@k, precision@k and MRR, while translation-quality evaluation may include COMET, BERTScore, BLEU and targeted qualitative error analysis.
+
+The retrieval dataset consists of the 400 examples reserved during Phase 1.
+
+---
+
+## Current Implementation Snapshot
+
+The latest development work has moved the project beyond a retrieval placeholder into an initial vector-database and hybrid-prediction workflow.
+
+Current capabilities include:
+
+- A translation-memory vector database built from the reserved 400-segment retrieval set.
+- Semantic retrieval for Spanish source segments.
+- Separate prediction generation for the base Llama 3.1 8B Instruct model and the QLoRA-adapted model.
+- Hybrid prediction files combining model outputs with translation-memory retrieval.
+- A workflow that preserves intermediate predictions so that semantic retrieval, fuzzy matching and model behaviour can be compared independently.
+- Initial qualitative inspection of hybrid outputs, including cases where retrieval-related instructions or explanatory prefixes appear in the generated text.
+
+These results are exploratory. Retrieval relevance does not automatically guarantee a better final translation, and hybrid outputs require evaluation for both improvements and regressions. The next stage is to standardise prompts and output formatting, compare semantic and fuzzy retrieval, and run consistent automatic and qualitative evaluation across the base and adapter configurations.
+
