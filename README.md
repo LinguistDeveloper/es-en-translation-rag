@@ -292,61 +292,120 @@ This will allow the project to investigate not only whether fine-tuning and retr
 
 ### Phase 4 — Retrieval-Augmented Translation
 
-**Status: Vector database implemented; base and adapter hybrid predictions generated; evaluation ongoing**
+**Status: Vector database implemented; base and adapter hybrid predictions generated; initial COMET evaluation completed**
 
-The retrieval experiment investigates whether translation-memory retrieval improves Spanish→English translation quality and whether retrieval has complementary effects when combined with fine-tuning. The current implementation uses a vector database containing the 400 segments reserved during Phase 1.
+The retrieval experiment investigates whether translation-memory retrieval improves Spanish→English translation quality and whether retrieval has complementary effects when combined with domain-specific fine-tuning.
 
-The workflow now supports generating and comparing hybrid predictions for both the base model and the fine-tuned model:
+The current implementation uses a translation-memory vector database containing the segments reserved during Phase 1. The workflow supports generating and comparing predictions for four configurations:
 
 1. Base model
 2. Base model + retrieval
-3. Fine-tuned model
-4. Fine-tuned model + retrieval
+3. Fine-tuned adapter model
+4. Fine-tuned adapter model + retrieval
 
-The retrieval dataset consists of the 400 examples reserved during Phase 1.
+The retrieval experiment currently focuses on semantic vector retrieval, with fuzzy matching and alternative retrieval-weight configurations planned for subsequent investigation.
 
 ### Retrieval and hybrid prediction workflow
 
-The current workflow separates model generation from retrieval-based post-processing. This makes it possible to preserve the original model predictions and inspect the effect of translation-memory retrieval independently.
+[svg](https://github.com/LinguistDeveloper/es-en-translation-rag#retrieval-and-hybrid-prediction-workflow)
+
+The workflow separates model generation from retrieval-based post-processing. This preserves the original model predictions and makes it possible to assess the contribution of translation-memory retrieval independently of the underlying model.
 
 The implemented workflow includes:
 
-1. Generate translations with the **base model**.
+1. Generate translations with the **base Llama 3.1 8B Instruct model**.
 2. Generate translations with the **fine-tuned model using the QLoRA adapter**.
 3. Query the translation-memory vector database for relevant Spanish source segments.
-4. Produce hybrid predictions by combining the generated translation with retrieved translation-memory evidence.
-5. Save the base, adapter, and hybrid outputs for subsequent comparison and evaluation.
+4. Produce hybrid predictions by combining model-generated translations with retrieved translation-memory evidence.
+5. Save base, adapter and hybrid outputs in separate files for subsequent comparison and evaluation.
+6. Evaluate the resulting predictions using COMET and qualitative inspection.
 
-The current hybrid experiments use semantic vector retrieval and are intended to be compared with fuzzy matching. The outputs are retained in separate files so that retrieval behaviour, model generation, and post-processing can be evaluated independently rather than treated as a single opaque pipeline.
+The hybrid approach is being investigated as a practical translation-memory augmentation strategy. The model generates a translation, while retrieval supplies potentially relevant bilingual evidence that can be used to support or revise the output.
 
-The hybrid approach is being investigated as a practical translation-memory augmentation strategy: the model generates a translation, while retrieval provides potentially relevant bilingual evidence that can be used to revise or support the generated output. Initial inspection has identified cases in which the hybrid prompt or output formatting can introduce unnecessary text, such as explanatory prefixes. These cases will be tracked as part of the qualitative and quantitative evaluation.
+The current implementation uses a weighted retrieval configuration:
 
-The next evaluation stage will compare:
+* **Fuzzy retrieval weight:** 0.4
+* **Semantic retrieval weight:** 0.6
 
-- Base model predictions
-- Base model + semantic retrieval hybrid predictions
-- Fine-tuned adapter predictions
-- Fine-tuned adapter + semantic retrieval hybrid predictions
-- Where applicable, fuzzy-retrieval variants of the same configurations
+These weights are experimental and are not yet established as optimal. Further testing will investigate whether increasing the fuzzy retrieval contribution produces better translation quality, particularly for repeated or closely related source segments.
 
-The comparison will consider translation quality, retrieval relevance, consistency with the reference translation, and possible regressions introduced by retrieval. Relevant retrieval metrics may include recall@k, precision@k and MRR, while translation-quality evaluation may include COMET, BERTScore, BLEU and targeted qualitative error analysis.
+### Initial COMET evaluation
 
-The retrieval dataset consists of the 400 examples reserved during Phase 1.
+The first comparison evaluates the base model against the fine-tuned adapter model, followed by a comparison between the adapter-only and adapter hybrid configurations.
+
+| Configuration                         | COMET score |
+| ------------------------------------- | ----------: |
+| Base model                            |    0.849007 |
+| Fine-tuned adapter                    |    0.869157 |
+| Fine-tuned adapter + hybrid retrieval |    0.867365 |
+
+The adapter model achieved a COMET score of **0.869157**, compared with **0.849007** for the base model, representing an absolute improvement of **+0.020151**.
+
+With the current hybrid retrieval configuration, the adapter hybrid model achieved a COMET score of **0.867365**, which is **0.001793 lower** than the adapter-only score.
+
+These initial results indicate that fine-tuning improved the measured translation quality on the evaluated dataset, whereas the current hybrid retrieval configuration did not provide an additional COMET improvement over the fine-tuned model alone. The small difference between the adapter and adapter hybrid scores requires further investigation rather than being interpreted as evidence that retrieval cannot improve the model.
+
+The results are exploratory and should be interpreted in the context of the evaluation dataset, retrieval configuration, prompt design and hybrid post-processing strategy.
+
+### Retrieval weighting and dynamic translation memory
+
+A further research direction is to investigate whether the relative contribution of fuzzy and semantic retrieval affects hybrid translation quality.
+
+The current configuration assigns a weight of 0.4 to fuzzy retrieval and 0.6 to semantic retrieval. Subsequent experiments will test alternative weight combinations to determine whether stronger fuzzy matching can improve the selection of translation-memory evidence.
+
+One hypothesis is that **dynamic translation-memory retrieval may be particularly beneficial when translating single documents or groups of related documents**. Repeated terminology, recurring segments and document-specific translation patterns could potentially make closely matching translation-memory entries more valuable than semantically similar but less contextually specific results.
+
+This hypothesis remains to be tested. The investigation will consider whether dynamically updated translation memories, document-level context and retrieval weighting can improve consistency and translation quality over time.
+
+Potential future experiments include:
+
+* Testing higher fuzzy retrieval weights.
+* Comparing semantic-only, fuzzy-only and hybrid retrieval configurations.
+* Investigating document-level or related-document translation memories.
+* Assessing whether dynamic TMX updates improve terminology consistency and translation quality.
+* Examining retrieval relevance alongside final translation quality.
+* Comparing performance across repeated, similar and previously unseen source segments.
+
+### Evaluation roadmap
+
+The next evaluation stage will compare the following configurations where the required predictions are available:
+
+* Base model predictions.
+* Base model + semantic retrieval hybrid predictions.
+* Fine-tuned adapter predictions.
+* Fine-tuned adapter + semantic retrieval hybrid predictions.
+* Alternative fuzzy and weighted-retrieval configurations.
+
+The comparison will consider translation quality, retrieval relevance, consistency with reference translations and possible regressions introduced by retrieval.
+
+Relevant retrieval metrics may include recall@k, precision@k and MRR, while translation-quality evaluation may include COMET, BERTScore, BLEU and targeted qualitative error analysis.
+
+The project will retain separate prediction and evaluation files so that model generation, retrieval behaviour and hybrid post-processing can be investigated independently rather than treated as a single opaque pipeline.
 
 ---
 
 ## Current Implementation Snapshot
 
-The latest development work has moved the project beyond a retrieval placeholder into an initial vector-database and hybrid-prediction workflow.
+[svg](https://github.com/LinguistDeveloper/es-en-translation-rag#current-implementation-snapshot)
+
+The latest development work has moved the project beyond a retrieval placeholder into an initial vector-database and hybrid-prediction workflow, supported by comparative COMET evaluation.
 
 Current capabilities include:
 
-- A translation-memory vector database built from the reserved 400-segment retrieval set.
-- Semantic retrieval for Spanish source segments.
-- Separate prediction generation for the base Llama 3.1 8B Instruct model and the QLoRA-adapted model.
-- Hybrid prediction files combining model outputs with translation-memory retrieval.
-- A workflow that preserves intermediate predictions so that semantic retrieval, fuzzy matching and model behaviour can be compared independently.
-- Initial qualitative inspection of hybrid outputs, including cases where retrieval-related instructions or explanatory prefixes appear in the generated text.
+* A translation-memory vector database built from the reserved retrieval set.
+* Semantic retrieval for Spanish source segments.
+* Separate prediction generation for the base Llama 3.1 8B Instruct model and the QLoRA-adapted model.
+* Hybrid prediction generation combining model outputs with translation-memory retrieval.
+* Separate prediction files for base, adapter and hybrid configurations.
+* Comparative COMET evaluation of the base and adapter models.
+* Comparative COMET evaluation of the adapter-only and adapter hybrid configurations.
+* Experimental fuzzy and semantic retrieval weighting.
+* A workflow that preserves intermediate predictions so that retrieval behaviour, model generation and post-processing can be evaluated independently.
 
-These results are exploratory. Retrieval relevance does not automatically guarantee a better final translation, and hybrid outputs require evaluation for both improvements and regressions. The next stage is to standardise prompts and output formatting, compare semantic and fuzzy retrieval, and run consistent automatic and qualitative evaluation across the base and adapter configurations.
+### Current findings
 
+The initial COMET results show a measurable improvement from fine-tuning over the base model on the evaluated dataset. However, the first adapter hybrid configuration, using fuzzy and semantic retrieval weights of 0.4 and 0.6 respectively, produced a slightly lower COMET score than the adapter-only configuration.
+
+This provides a basis for further investigation into retrieval selection, weighting, prompt design and document-level translation-memory strategies.
+
+The current findings are preliminary. Additional experiments are needed to establish whether retrieval can provide consistent improvements, under which conditions it is most beneficial, and whether dynamic translation-memory updates can improve performance for single or related documents over time.
