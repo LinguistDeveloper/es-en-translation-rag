@@ -307,8 +307,6 @@ The retrieval experiment currently focuses on semantic vector retrieval, with fu
 
 ### Retrieval and hybrid prediction workflow
 
-[svg](https://github.com/LinguistDeveloper/es-en-translation-rag#retrieval-and-hybrid-prediction-workflow)
-
 The workflow separates model generation from retrieval-based post-processing. This preserves the original model predictions and makes it possible to assess the contribution of translation-memory retrieval independently of the underlying model.
 
 The implemented workflow includes:
